@@ -3,29 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026跨年倒计时</title>
+    <title>新年快乐</title>
     <style>
-        /* 基础样式，确保不会因为 CSS 还没加载完而白屏 */
         * { margin: 0; padding: 0; box-sizing: border-box; overflow: hidden; }
         body {
             width: 100vw; height: 100vh;
             background: #05001a;
             display: flex; justify-content: center; align-items: center;
-            font-family: "Microsoft Yahei", sans-serif;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
             cursor: pointer;
             color: white;
         }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
 
-        /* 顶部时间 */
+        /* 居中彩色跳动时间 */
         .initial-countdown { 
-            font-size: 24px; font-weight: bold; text-align: center; 
-            position: absolute; top: 20px; z-index: 50;
-            animation: colorShift 2s infinite alternate; 
+            font-size: clamp(24px, 6vw, 48px); 
+            font-weight: 900; 
+            text-align: center; 
+            position: absolute; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); 
+            z-index: 50;
+            background: linear-gradient(to right, #ff3366, #ffdb58, #33ccff, #9933ff, #33ff66);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
         }
-        @keyframes colorShift { 
-            0% { color: #ff3366; } 100% { color: #33ccff; } 
-        }
+        @keyframes shine { to { background-position: 200% center; } }
 
         /* 大数字倒数 */
         .big-count { 
@@ -39,7 +45,7 @@
             100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
         }
 
-        /* 祝福语：移除了外部字体依赖，防止加载导致的白屏 */
+        /* 祝福语 */
         .greeting {
             font-size: 40px; font-weight: bold;
             position: absolute; top: 35%; left: 50%;
@@ -47,6 +53,7 @@
             display: none; z-index: 10;
             opacity: 1;
             transition: opacity 2s ease; 
+            text-shadow: 0 0 20px rgba(255,255,255,0.5);
         }
 
         .audio-tip { position: absolute; bottom: 20px; color: #fff; opacity: 0.7; font-size: 14px; z-index: 20; }
@@ -54,12 +61,12 @@
 </head>
 <body>
 
-    <div class="initial-countdown" id="initialCount">正在准备新年氛围...</div>
+    <div class="initial-countdown" id="initialCount">CLICK TO START</div>
     <div class="big-count" id="count3">3</div>
     <div class="big-count" id="count2">2</div>
     <div class="big-count" id="count1">1</div>
     <div class="greeting" id="greeting1">새해 복 많이 받으세요</div>
-    <div class="audio-tip" id="audioTip">✨ 点击/触摸屏幕开始 ✨</div>
+    <div class="audio-tip" id="audioTip">Pot</div>
     <canvas id="canvas"></canvas>
 
     <div style="display:none">
@@ -69,34 +76,24 @@
     </div>
 
 <script>
-    // 确保 DOM 加载完再执行
     window.onload = function() {
         const initialCountEl = document.getElementById('initialCount');
         const countEls = [document.getElementById('count3'), document.getElementById('count2'), document.getElementById('count1')];
         const greeting1El = document.getElementById('greeting1');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
         const s1 = document.getElementById('sound1'), s2 = document.getElementById('sound2'), s3 = document.getElementById('sound3');
 
-        let particles = [];
-        let fireworkStartTime = 0;
-        let allowSounds = true;
-        let started = false;
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        let particles = [], fireworkStartTime = 0, allowSounds = true, started = false;
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
         function padZero(n) { return n.toString().padStart(2, '0'); }
 
-        // 1. 时间逻辑
+        // 1. 时间逻辑 (23:59:57)
         let currentTime = new Date('2025-12-31T23:59:57').getTime();
         const endTime = new Date('2026-01-01T00:00:00').getTime();
 
         function updateInitialCount() {
-            if(!started) {
-                initialCountEl.textContent = "点击屏幕以启动倒计时";
-                return;
-            }
+            if(!started) return;
             const date = new Date(currentTime);
             initialCountEl.textContent = `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}:${padZero(date.getSeconds())}`;
             
@@ -109,7 +106,7 @@
         }
         const initialInterval = setInterval(updateInitialCount, 1000);
 
-        // 2. 倒数逻辑
+        // 2. 倒计时阶段
         function startBigCountdown() {
             let i = 0;
             const timer = setInterval(() => {
@@ -124,7 +121,7 @@
             }, 1000);
         }
 
-        // 3. 粒子逻辑
+        // 3. 烟花粒子逻辑
         class Particle {
             constructor(x, y, color) {
                 this.x = x; this.y = y; this.radius = Math.random() * 2 + 1;
@@ -147,20 +144,28 @@
             if (fireworkStartTime > 0) {
                 const elapsed = (Date.now() - fireworkStartTime) / 1000;
                 const cycle = elapsed % 32;
-                if (cycle < 9) allowSounds = true;
-                else if (cycle < 15) allowSounds = false;
-                else if (cycle < 25) allowSounds = true;
-                else allowSounds = false;
+                // 0-9s 播, 9-15s 关, 15-25s 播, 25-32s 关
+                allowSounds = (cycle < 9 || (cycle >= 15 && cycle < 25));
             }
 
             if (allowSounds) {
                 [s1, s2, s3].forEach(s => {
                     const clone = s.cloneNode();
-                    clone.volume = (s.id === 'sound1') ? 0.2 : 0.6;
-                    clone.play().catch(() => {});
+                    // 逻辑：音频2 缩短声音 (设置在0.6秒后自动停止)
+                    if(s.id === 'sound2') {
+                        clone.volume = 0.7;
+                        clone.play();
+                        setTimeout(() => { 
+                            clone.pause(); 
+                            clone.remove(); 
+                        }, 600); 
+                    } else {
+                        clone.volume = (s.id === 'sound1') ? 0.2 : 0.6;
+                        clone.play().catch(() => {});
+                    }
                 });
             }
-            for (let i = 0; i < 80; i++) particles.push(new Particle(x, y, color));
+            for (let i = 0; i < 75; i++) particles.push(new Particle(x, y, color));
         }
 
         function animate() {
@@ -174,7 +179,7 @@
             fireworkStartTime = Date.now();
             greeting1El.style.display = 'block';
             setTimeout(() => { greeting1El.style.opacity = '0'; }, 4000);
-            setInterval(createFirework, 750);
+            setInterval(createFirework, 700);
             animate();
         }
 
@@ -182,9 +187,10 @@
         document.body.onclick = function() {
             if(!started) {
                 started = true;
-                document.getElementById('audioTip').style.display = 'none';
-                // 激活音频权限
+                initialCountEl.style.top = '50%'; // 确保居中
+                document.getElementById('audioTip').style.opacity = '0.3';
                 [s1, s2, s3].forEach(s => { s.play().then(()=>{s.pause(); s.currentTime=0;}).catch(()=>{}); });
+                updateInitialCount();
             }
         };
 
