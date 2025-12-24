@@ -37,15 +37,10 @@
 <script>
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const sUp = document.getElementById('sound1'), 
-          sSpecial = document.getElementById('sound2'), 
-          sBoom = document.getElementById('sound3');
-          
-    canvas.width = window.innerWidth; 
-    canvas.height = window.innerHeight;
+    const sUp = document.getElementById('sound1'), sSpecial = document.getElementById('sound2'), sBoom = document.getElementById('sound3');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
-    let isSoundDisabled = false; // 用于30秒后禁用音效1和2
-    let specialCount = 0; 
+    let isSound2Disabled = false; // 20秒后禁用音效2
     let particles = [];
 
     // 倒计时逻辑
@@ -76,21 +71,16 @@
 
     class Particle {
         constructor(x, y, color) { 
-            this.x = x; this.y = y; 
-            this.radius = Math.random()*2+1; 
-            this.color = color; 
-            this.speedX = (Math.random()-0.5)*8; 
-            this.speedY = (Math.random()-0.5)*8; 
-            this.alpha = 1; 
-            this.gravity = 0.05; 
+            this.x = x; this.y = y; this.radius = Math.random()*2+1; this.color = color; 
+            this.speedX = (Math.random()-0.5)*8; this.speedY = (Math.random()-0.5)*8; 
+            this.alpha = 1; this.gravity = 0.05; 
         }
         update() { this.x += this.speedX; this.y += this.speedY; this.speedY += this.gravity; this.alpha -= 0.01; }
         draw() { ctx.save(); ctx.globalAlpha = this.alpha; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2); ctx.fillStyle = this.color; ctx.fill(); ctx.restore(); }
     }
 
     function playAudio(obj, vol = 0.5) {
-        // 如果是音效1或2，且已经过了30秒禁令期，则不播放
-        if (isSoundDisabled && (obj === sUp || obj === sSpecial)) return;
+        if (isSound2Disabled && obj === sSpecial) return; // 20秒后拦截音效2
         const s = obj.cloneNode(); s.volume = vol; s.play().catch(() => {});
         s.onended = () => s.remove();
     }
@@ -99,21 +89,19 @@
         const colors = ["#ff3366", "#ffd700", "#33ccff", "#33ff66", "#ff69b4"];
         const color = colors[Math.floor(Math.random()*colors.length)];
         for (let i = 0; i < 80; i++) particles.push(new Particle(x, y, color));
-        
-        playAudio(sBoom, 0.7); // 音效3爆炸声全程保留
-        if (!isSoundDisabled) playAudio(sUp, 0.2); // 音效1作为炸裂点缀，30秒后消失
+        playAudio(sBoom, 0.7); // 音效3保留
+        playAudio(sUp, 0.2);   // 音效1保留
     }
 
     function handleFireworks() {
-        // 直接在屏幕上方区域随机位置产生爆炸，取消上升动画
+        // 取消上升场景，直接在空中炸开
         const x = Math.random() * canvas.width;
         const y = Math.random() * canvas.height * 0.6;
         createExplosion(x, y);
     }
 
     function animate() {
-        ctx.fillStyle = "rgba(5, 0, 26, 0.2)"; 
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "rgba(5, 0, 26, 0.2)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
         particles = particles.filter(p => p.alpha > 0);
         particles.forEach(p => { p.update(); p.draw(); });
         requestAnimationFrame(animate);
@@ -123,28 +111,22 @@
         const greet = document.getElementById('greeting1');
         greet.style.display = 'block';
         
-        // 祝福语10秒后消失
-        setTimeout(() => { greet.style.display = 'none'; }, 10000);
+        // 祝福语 5秒后消失
+        setTimeout(() => { greet.style.display = 'none'; }, 5000);
 
-        // 30秒后禁用音效1和音效2
-        setTimeout(() => { 
-            isSoundDisabled = true; 
-            sSpecial.pause(); 
-        }, 30000);
+        // 20秒后禁用音效2
+        setTimeout(() => { isSound2Disabled = true; sSpecial.pause(); }, 20000);
 
         animate(); 
-        setInterval(handleFireworks, 600); // 烟花产生频率
+        setInterval(handleFireworks, 600);
 
-        // 音效2逻辑：只出现2次，每次8秒
-        const specialInterval = setInterval(() => {
-            if (specialCount >= 2 || isSoundDisabled) { clearInterval(specialInterval); return; }
-            sSpecial.currentTime = 0; sSpecial.play(); specialCount++;
-            setTimeout(() => { sSpecial.pause(); }, 8000);
-        }, 12000);
-        
-        // 立即执行第一次音效2
-        sSpecial.play(); specialCount++;
-        setTimeout(() => { sSpecial.pause(); }, 8000);
+        // 初始触发音效2
+        sSpecial.currentTime = 0; sSpecial.play();
+        // 设置一个循环，直到20秒被禁用
+        const spInterval = setInterval(() => {
+            if (isSound2Disabled) { clearInterval(spInterval); return; }
+            sSpecial.currentTime = 0; sSpecial.play();
+        }, 8000);
     }
 
     document.body.addEventListener('click', () => {
