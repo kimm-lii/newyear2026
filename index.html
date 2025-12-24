@@ -7,149 +7,20 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;overflow:hidden;}
 body{
-  width:100vw;height:100vh;
-  background:#05001a;
-  display:flex;justify-content:center;align-items:center;
-  font-family:"Microsoft Yahei",sans-serif;
-  cursor:pointer;
+    width:100vw;height:100vh;
+    background:#05001a;
+    display:flex;justify-content:center;align-items:center;
+    font-family:"Microsoft Yahei",sans-serif;
+    cursor:pointer;
 }
-.greeting{
-  font-family:"Ma Shan Zheng",sans-serif;
-  font-size:35px;
-  font-weight:bold;
-  color:#fff;
-  position:absolute;
-  top:30%;left:50%;
-  transform:translateX(-50%);
-  opacity:0;
-  transition:opacity 3s linear;
-  z-index:5;
-  pointer-events: none;
-}
-canvas{
-  position:absolute;
-  top:0;left:0;
-  width:100%;height:100%;
-  z-index:1;
-}
-.audio-tip{
-  position:absolute;
-  bottom:20px;
-  color:#fff;
-  opacity:.7;
-  font-size:14px;
-  z-index:10;
-}
+.initial-countdown{font-size:24px;font-weight:bold;text-align:center;animation:colorShift 2s infinite alternate;}
+@keyframes colorShift{0%{color:#ff3366;}25%{color:#33ccff;}50%{color:#ffd700;}75%{color:#9933ff;}100%{color:#33ff66;}}
+.big-count{font-size:8vw;font-weight:900;text-align:center;display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);animation:scaleBlink 1s ease-in-out forwards;}
+@keyframes scaleBlink{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1);}100%{opacity:0;transform:translate(-50%,-50%) scale(1.8);}}
+.greeting{font-family:"Ma Shan Zheng",sans-serif;font-size:35px;font-weight:bold;-webkit-text-stroke:2px #222;color:transparent;background-clip:text;-webkit-background-clip:text;position:absolute;top:30%;left:50%;transform:translateX(-50%);display:none;animation:floatUpFade 2s ease-out forwards,colorGradient 3s infinite alternate;}
+@keyframes colorGradient{0%{background-image:linear-gradient(90deg,#ff3366,#ffd700);}25%{background-image:linear-gradient(90deg,#ffd700,#33ccff);}50%{background-image:linear-gradient(90deg,#33ccff,#9933ff);}75%{background-image:linear-gradient(90deg,#9933ff,#ff9933);}100%{background-image:linear-gradient(90deg,#ff9933,#ff3366);}}
+@keyframes floatUpFade{0%{opacity:1;transform:translateX(-50%) translateY(0);}100%{opacity:0;transform:translateX(-50%) translateY(-50px);}}
+canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;}
+.audio-tip{position:absolute;bottom:20px;color:#fff;opacity:0.7;font-size:14px;text-align:center;z-index:10;}
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
-</head>
-
-<body>
-
-<div class="greeting" id="greeting">새해 복 많이 받으세요</div>
-<div class="audio-tip" id="audioTip">点击屏幕 🎆</div>
-<canvas id="canvas"></canvas>
-
-<audio id="sound2" src="2.mp3" preload="auto"></audio>
-<audio id="sound3" src="3.mp3" preload="auto"></audio>
-
-<script>
-/* ===== Canvas ===== */
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-canvas.width = innerWidth;
-canvas.height = innerHeight;
-addEventListener('resize',()=>{
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-});
-
-/* ===== 文字动画 ===== */
-const greeting = document.getElementById('greeting');
-setTimeout(()=>{
-  greeting.style.opacity = 1;
-  setTimeout(()=>greeting.style.opacity = 0, 3000);
-}, 3000);
-
-/* ===== 烟花粒子逻辑 ===== */
-let particles=[];
-class Particle{
-  constructor(x,y,color){
-    this.x=x;this.y=y;
-    this.vx=(Math.random()-0.5)*7;
-    this.vy=(Math.random()-0.5)*7;
-    this.alpha=1;
-    this.color=color;
-  }
-  update(){
-    this.x+=this.vx;
-    this.y+=this.vy;
-    this.vy+=0.05;
-    this.alpha-=0.015;
-    return this.alpha>0;
-  }
-  draw(){
-    ctx.globalAlpha=this.alpha;
-    ctx.fillStyle=this.color;
-    ctx.fillRect(this.x,this.y,3,3);
-    ctx.globalAlpha=1;
-  }
-}
-
-function createFireworkAt(x,y){
-  const colors=["#ff0043","#14fc56","#1e90ff","#ffd700","#ff69b4"];
-  const color=colors[Math.floor(Math.random()*colors.length)];
-  for(let i=0;i<80;i++){
-    particles.push(new Particle(x,y,color));
-  }
-}
-
-// 自动生成烟花：每 800ms 在随机位置产生一次，确保持续不断
-setInterval(() => {
-    const randomX = Math.random() * canvas.width;
-    const randomY = Math.random() * (canvas.height * 0.6); // 在屏幕上半部分随机产生
-    createFireworkAt(randomX, randomY);
-}, 800);
-
-function animate(){
-  ctx.fillStyle="rgba(5,0,26,.25)";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  particles = particles.filter(p=>p.update());
-  particles.forEach(p=>p.draw());
-  requestAnimationFrame(animate);
-}
-animate();
-
-/* ===== 声音播放逻辑 ===== */
-const sound2 = document.getElementById('sound2');
-const sound3 = document.getElementById('sound3');
-let clickCount = 0; // 点击计数器
-
-function playFromStart(audioEl, volume){
-  const a = audioEl.cloneNode();
-  a.volume = volume;
-  a.play().catch(()=>{});
-  a.onended = () => a.remove();
-}
-
-/* ===== 点击交互 ===== */
-document.body.addEventListener('click', (e)=>{
-  clickCount++; // 每次点击累加一次
-  
-  // 逻辑：如果点击次数小于或等于2，播放音频2和音频3；否则只播放音频3
-  if (clickCount <= 2) {
-    playFromStart(sound2, 0.6);
-  }
-  
-  playFromStart(sound3, 0.7);
-  
-  // 点击位置产生烟花
-  createFireworkAt(e.clientX, e.clientY);
-  
-  // 隐藏提示
-  document.getElementById('audioTip').style.display='none';
-});
-</script>
-
-</body>
-</html>
+<link href="https://fonts.googleapis
