@@ -24,6 +24,7 @@ body{
   opacity:0;
   transition:opacity 3s linear;
   z-index:5;
+  pointer-events: none;
 }
 canvas{
   position:absolute;
@@ -49,7 +50,6 @@ canvas{
 <div class="audio-tip" id="audioTip">点击屏幕 🎆</div>
 <canvas id="canvas"></canvas>
 
-<!-- 本地音频 -->
 <audio id="sound2" src="2.mp3" preload="auto"></audio>
 <audio id="sound3" src="3.mp3" preload="auto"></audio>
 
@@ -64,14 +64,14 @@ addEventListener('resize',()=>{
   canvas.height = innerHeight;
 });
 
-/* ===== 文字 ===== */
+/* ===== 文字动画 ===== */
 const greeting = document.getElementById('greeting');
 setTimeout(()=>{
   greeting.style.opacity = 1;
-  setTimeout(()=>greeting.style.opacity = 0,3000);
-},3000);
+  setTimeout(()=>greeting.style.opacity = 0, 3000);
+}, 3000);
 
-/* ===== 烟花粒子 ===== */
+/* ===== 烟花粒子逻辑 ===== */
 let particles=[];
 class Particle{
   constructor(x,y,color){
@@ -95,6 +95,7 @@ class Particle{
     ctx.globalAlpha=1;
   }
 }
+
 function createFireworkAt(x,y){
   const colors=["#ff0043","#14fc56","#1e90ff","#ffd700","#ff69b4"];
   const color=colors[Math.floor(Math.random()*colors.length)];
@@ -102,6 +103,14 @@ function createFireworkAt(x,y){
     particles.push(new Particle(x,y,color));
   }
 }
+
+// 自动生成烟花：每 800ms 在随机位置产生一次，确保持续不断
+setInterval(() => {
+    const randomX = Math.random() * canvas.width;
+    const randomY = Math.random() * (canvas.height * 0.6); // 在屏幕上半部分随机产生
+    createFireworkAt(randomX, randomY);
+}, 800);
+
 function animate(){
   ctx.fillStyle="rgba(5,0,26,.25)";
   ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -111,9 +120,10 @@ function animate(){
 }
 animate();
 
-/* ===== 声音（每次从头，不连音） ===== */
+/* ===== 声音播放逻辑 ===== */
 const sound2 = document.getElementById('sound2');
 const sound3 = document.getElementById('sound3');
+let clickCount = 0; // 点击计数器
 
 function playFromStart(audioEl, volume){
   const a = audioEl.cloneNode();
@@ -122,11 +132,21 @@ function playFromStart(audioEl, volume){
   a.onended = () => a.remove();
 }
 
-/* ===== 点击：烟花 + 声音 ===== */
+/* ===== 点击交互 ===== */
 document.body.addEventListener('click', (e)=>{
-  playFromStart(sound2,0.6);
-  playFromStart(sound3,0.7);
+  clickCount++; // 每次点击累加一次
+  
+  // 逻辑：如果点击次数小于或等于2，播放音频2和音频3；否则只播放音频3
+  if (clickCount <= 2) {
+    playFromStart(sound2, 0.6);
+  }
+  
+  playFromStart(sound3, 0.7);
+  
+  // 点击位置产生烟花
   createFireworkAt(e.clientX, e.clientY);
+  
+  // 隐藏提示
   document.getElementById('audioTip').style.display='none';
 });
 </script>
