@@ -23,4 +23,158 @@ body{
 canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;}
 .audio-tip{position:absolute;bottom:20px;color:#fff;opacity:0.7;font-size:14px;text-align:center;z-index:10;}
 </style>
-<link href="https://fonts.googleapis
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- 初始倒计时 -->
+<div class="initial-countdown" id="initialCount"></div>
+<!-- 3/2/1倒数 -->
+<div class="big-count" id="count3">3</div>
+<div class="big-count" id="count2">2</div>
+<div class="big-count" id="count1">1</div>
+<!-- 韩语祝福 -->
+<div class="greeting" id="greeting1">새해 복 많이 받으세요</div>
+<!-- 音乐提示 -->
+<div class="audio-tip" id="audioTip">点击屏幕有声音</div>
+<!-- 烟花画布 -->
+<canvas id="canvas"></canvas>
+
+<!-- 本地音效 -->
+<audio id="sound2" src="2.mp3" preload="auto"></audio>
+<audio id="sound3" src="3.mp3" preload="auto"></audio>
+
+<script>
+const initialCountEl=document.getElementById('initialCount');
+const count3El=document.getElementById('count3');
+const count2El=document.getElementById('count2');
+const count1El=document.getElementById('count1');
+const greeting1El=document.getElementById('greeting1');
+const audioTipEl=document.getElementById('audioTip');
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
+
+function padZero(n){return n.toString().padStart(2,'0');}
+
+// ===== 初始倒计时 =====
+let currentTime=new Date('2025-12-31T23:59:57').getTime();
+const endTime=new Date('2026-01-01T00:00:00').getTime();
+function updateInitialCount(){
+    const date=new Date(currentTime);
+    initialCountEl.textContent=`${date.getFullYear()}-${padZero(date.getMonth()+1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}:${padZero(date.getSeconds())}`;
+    if(currentTime>=endTime){
+        clearInterval(initialInterval);
+        initialCountEl.style.display='none';
+        startBigCountdown();
+    }
+    currentTime+=1000;
+}
+const initialInterval=setInterval(updateInitialCount,1000);
+updateInitialCount();
+
+// ===== 倒数 3/2/1 =====
+function startBigCountdown(){
+    const counts=[count3El,count2El,count1El];
+    const colors=['#ff3366','#ffd700','#33ccff','#9933ff','#33ff66','#ff9933'];
+    let i=0;
+    const timer=setInterval(()=>{
+        if(i>0) counts[i-1].style.display='none';
+        if(i<3){
+            counts[i].style.color=colors[Math.floor(Math.random()*colors.length)];
+            counts[i].style.display='block';
+            i++;
+        }else{
+            clearInterval(timer);
+            setTimeout(startFireworksPhase,500);
+        }
+    },1000);
+}
+
+// ===== 烟花 =====
+class Particle{
+    constructor(x,y,color){
+        this.x=x;this.y=y;
+        this.radius=Math.random()*2+1;
+        this.color=color;
+        this.speedX=(Math.random()-0.5)*6;
+        this.speedY=(Math.random()-0.5)*6;
+        this.alpha=1;
+        this.gravity=0.05;
+    }
+    update(){
+        this.x+=this.speedX;
+        this.y+=this.speedY;
+        this.speedY+=this.gravity;
+        this.alpha-=0.01;
+    }
+    draw(){
+        ctx.save();
+        ctx.globalAlpha=this.alpha;
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+        ctx.fillStyle=this.color;
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+let particles=[];
+function createFirework(){
+    const x=Math.random()*canvas.width;
+    const y=Math.random()*canvas.height*0.5;
+    const colors=["#ff0043","#14fc56","#1e90ff","#ffd700","#ff69b4"];
+    const color=colors[Math.floor(Math.random()*colors.length)];
+    for(let i=0;i<80;i++) particles.push(new Particle(x,y,color));
+}
+
+function animate(){
+    ctx.fillStyle="rgba(0,0,0,0.2)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    particles.forEach((p,i)=>{
+        p.update();p.draw();
+        if(p.alpha<=0) particles.splice(i,1);
+    });
+    requestAnimationFrame(animate);
+}
+
+// ===== 开始烟花阶段 =====
+let canPlaySound = false; // 倒计时前不允许播放声音
+function startFireworksPhase(){
+    canPlaySound = true; // ✅ 倒计时结束后允许播放声音
+    greeting1El.style.display='block';
+    setInterval(createFirework,800);
+    animate();
+}
+
+// ===== 点击播放声音（倒计时结束后才生效） =====
+const sound2=document.getElementById('sound2');
+const sound3=document.getElementById('sound3');
+let clickCount=0;
+
+document.body.addEventListener('click', ()=>{
+    if(!canPlaySound) return; // 倒计时阶段点击无效
+
+    clickCount++;
+    if(clickCount <= 2){
+        playFromStart(sound2,0.6);
+        playFromStart(sound3,0.7);
+    }else{
+        playFromStart(sound3,0.7);
+    }
+    audioTipEl.style.display='none';
+});
+
+// 每次播放从头开始
+function playFromStart(audioEl, volume){
+    const a = audioEl.cloneNode();
+    a.volume = volume;
+    a.play().catch(()=>{});
+    a.onended = () => a.remove();
+}
+</script>
+</body>
+</html>
