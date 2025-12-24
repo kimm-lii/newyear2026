@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026跨年盛典-精准同步版</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;overflow:hidden;}
+body{
+    width:100vw;height:100vh;
+    background:#05001a;
+    display:flex;justify-content:center;align-items:center;
+    font-family:"Microsoft Yahei",sans-serif;
+    cursor:pointer;
+}
+.initial-countdown{font-size:24px;font-weight:bold;text-align:center;animation:colorShift 2s infinite alternate;}
+@keyframes colorShift{0%{color:#ff3366;}25%{color:#33ccff;}50%{color:#ffd700;}75%{color:#9933ff;}100%{color:#33ff66;}}
+
+/* 倒计时彩色样式 */
+.big-count{font-size:15vw;font-weight:900;text-align:center;display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);animation:scaleBlink 1s ease-in-out forwards;z-index:100;}
+@keyframes scaleBlink{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1);}100%{opacity:0;transform:translate(-50%,-50%) scale(1.5);}}
+
+.greeting{font-family:"Ma Shan Zheng",sans-serif;font-size:45px;font-weight:bold;-webkit-text-stroke:1px #fff;color:transparent;background-clip:text;-webkit-background-clip:text;position:absolute;top:30%;left:50%;transform:translateX(-50%);display:none;animation:floatUpFade 2.5s ease-out forwards,colorGradient 3s infinite alternate;z-index:10;}
+@keyframes colorGradient{0%{background-image:linear-gradient(90deg,#ff3366,#ffd700);}100%{background-image:linear-gradient(90deg,#33ccff,#ff3366);}}
+@keyframes floatUpFade{0%{opacity:1;transform:translateX(-50%) translateY(20px);}100%{opacity:0.8;transform:translateX(-50%) translateY(0);}}
+
+canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;}
+.audio-tip{position:absolute;bottom:30px;color:#fff;opacity:0.6;font-size:14px;text-align:center;z-index:20;}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="initial-countdown" id="initialCount"></div>
+<div class="big-count" id="count3">3</div>
+<div class="big-count" id="count2">2</div>
+<div class="big-count" id="count1">1</div>
+<div class="greeting" id="greeting1">새해 복 많이 받으세요</div>
+<div class="audio-tip" id="audioTip">✨ 点击屏幕：开启同频升空烟花秀 ✨</div>
+<canvas id="canvas"></canvas>
+
+<audio id="bgm" loop><source src="data:audio/mpeg;base64,SUOzBAAAAAAA..."></audio>
+
+<div style="display:none;">
+    <audio id="sound1" src="1.mp3" preload="auto"></audio>
+    <audio id="sound2" src="2.mp3" preload="auto"></audio>
+    <audio id="sound3" src="3.mp3" preload="auto"></audio>
+</div>
+
+<script>
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const sUp=document.getElementById('sound1'), sSpecial=document.getElementById('sound2'), sBoom=document.getElementById('sound3');
+
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+
+let isSpecialActive = false; // 音频2是否激活的开关
+
+// ===== 1. 倒计时逻辑 =====
+let currentTime=new Date('2025-12-31T23:59:57').getTime();
+const endTime=new Date('2026-01-01T00:00:00').getTime();
+
+const initialInterval=setInterval(()=>{
+    const d=new Date(currentTime);
+    document.getElementById('initialCount').textContent=`${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
+    if(currentTime>=endTime){
+        clearInterval(initialInterval);
+        document.getElementById('initialCount').style.display='none';
+        startBigCountdown();
+    }
+    currentTime+=1000;
+},1000);
+
+function startBigCountdown(){
+    const els = [document.getElementById('count3'), document.getElementById('count2'), document.getElementById('count1')];
+    const colors = ['#FF3366', '#FFD700', '#33CCFF'];
+    let i=0;
+    const timer=setInterval(()=>{
+        if(i>0) els[i-1].style.display='none';
+        if(i<3){
+            els[i].style.color = colors[i];
+            els[i].style.display='block';
+            i++;
+        }else{
+            clearInterval(timer);
+            startFireworksPhase();
+        }
+    },1000);
+}
+
+// ===== 2. 烟花引擎 =====
+let particles=[];
+let rockets=[];
+
+class Rocket { // 升空逻辑
+    constructor(startX, startY, targetX, targetY, color) {
+        this.x = startX; this.y = startY;
+        this.targetY = targetY; this.color = color;
+        this.speed = 5;
+        this.done = false;
+    }
+    update() {
+        this.y -= this.speed;
+        if (this.y <= this.targetY) {
+            this.done = true;
+            createExplosion(this.x, this.y, this.color);
+        }
+    }
+    draw() {
+        ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2);
+        ctx.fillStyle = this.color; ctx.fill();
+    }
+}
+
+class Particle { // 爆炸逻辑 (原始内容菊花风格)
+    constructor(x,y,color){
+        this.x=x;this.y=y;this.radius=Math.random()*2+1;this.color=color;
+        this.speedX=(Math.random()-0.5)*7;this.speedY=(Math.random()-0.5)*7;
+        this.alpha=1;this.gravity=0.06;
+    }
+    update(){this.x+=this.speedX;this.y+=this.speedY;this.speedY+=this.gravity;this.alpha-=0.012;}
+    draw(){
+        ctx.save();ctx.globalAlpha=this.alpha;ctx.beginPath();
+        ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);ctx.fillStyle=this.color;
+        ctx.fill();ctx.restore();
+    }
+}
+
+function playAudio(obj, vol=0.5){
+    const s = obj.cloneNode(); s.volume=vol; s.play().catch(()=>{});
+    s.onended=()=>s.remove();
+}
+
+function createExplosion(x, y, color) {
+    for(let i=0; i<80; i++) particles.push(new Particle(x, y, color));
+    playAudio(sBoom, 0.7);
+}
+
+// 核心判断：根据isSpecialActive决定烟花模式
+function handleFireworks() {
+    const x = Math.random() * canvas.width;
+    const y = Math.random() * canvas.height * 0.5;
+    const colors = ["#ff3366", "#ffd700", "#33ccff", "#33ff66", "#ff69b4"];
+    const color = colors[Math.floor(Math.random()*colors.length)];
+
+    if (isSpecialActive) {
+        // 模式A：音频2启动期间 - 从地面升空
+        rockets.push(new Rocket(x, canvas.height, x, y, color));
+        playAudio(sUp, 0.3);
+    } else {
+        // 模式B：平时 - 原始菊花风格 (直接炸)
+        createExplosion(x, y, color);
+    }
+}
+
+function animate() {
+    ctx.fillStyle = "rgba(5, 0, 26, 0.2)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    rockets = rockets.filter(r => !r.done);
+    rockets.forEach(r => { r.update(); r.draw(); });
+
+    particles = particles.filter(p => p.alpha > 0);
+    particles.forEach(p => { p.update(); p.draw(); });
+
+    requestAnimationFrame(animate);
+}
+
+function startFireworksPhase(){
+    document.getElementById('greeting1').style.display='block';
+    animate();
+    
+    // 主生成器
+    setInterval(handleFireworks, 800);
+
+    // 【音频2时控逻辑】每隔12秒循环一次
+    function triggerSpecialCycle() {
+        console.log("音频2启动，切换为升空模式");
+        isSpecialActive = true;
+        sSpecial.currentTime = 0;
+        sSpecial.play();
+
+        // 8秒后自动停止音频和升空视觉
+        setTimeout(() => {
+            isSpecialActive = false;
+            sSpecial.pause();
+            console.log("音频2结束，恢复原始模式");
+        }, 8000);
+    }
+
+    // 启动循环：立即执行第一次，然后每12秒执行一次
+    triggerSpecialCycle();
+    setInterval(triggerSpecialCycle, 12000);
+}
+
+document.body.addEventListener('click',()=>{
+    document.getElementById('bgm').play();
+    [sUp, sSpecial, sBoom].forEach(s => { s.play().then(()=>{s.pause();s.currentTime=0;}).catch(()=>{}); });
+    document.getElementById('audioTip').style.display='none';
+},{once:true});
+</script>
+</body>
+</html>
