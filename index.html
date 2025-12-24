@@ -3,144 +3,133 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>2026跨年倒计时-本地音效版</title>
+<title>新年快乐</title>
 <style>
-    *{margin:0;padding:0;box-sizing:border-box;overflow:hidden;}
-    body{
-        width:100vw;height:100vh;
-        background:#05001a;
-        display:flex;justify-content:center;align-items:center;
-        font-family:"Microsoft Yahei",sans-serif;
-        cursor:pointer;
-    }
-    .initial-countdown{font-size:24px;font-weight:bold;text-align:center;animation:colorShift 2s infinite alternate;}
-    @keyframes colorShift{0%{color:#ff3366;}25%{color:#33ccff;}50%{color:#ffd700;}75%{color:#9933ff;}100%{color:#33ff66;}}
-    .big-count{font-size:8vw;font-weight:900;text-align:center;display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);animation:scaleBlink 1s ease-in-out forwards;}
-    @keyframes scaleBlink{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1);}100%{opacity:0;transform:translate(-50%,-50%) scale(1.8);}}
-    .greeting{font-family:"Ma Shan Zheng",sans-serif;font-size:35px;font-weight:bold;-webkit-text-stroke:2px #222;color:transparent;background-clip:text;-webkit-background-clip:text;position:absolute;top:30%;left:50%;transform:translateX(-50%);display:none;animation:floatUpFade 2s ease-out forwards,colorGradient 3s infinite alternate;}
-    @keyframes colorGradient{0%{background-image:linear-gradient(90deg,#ff3366,#ffd700);}25%{background-image:linear-gradient(90deg,#ffd700,#33ccff);}50%{background-image:linear-gradient(90deg,#33ccff,#9933ff);}75%{background-image:linear-gradient(90deg,#9933ff,#ff9933);}100%{background-image:linear-gradient(90deg,#ff9933,#ff3366);}}
-    @keyframes floatUpFade{0%{opacity:1;transform:translateX(-50%) translateY(0);}100%{opacity:0;transform:translateX(-50%) translateY(-50px);}}
-    canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;}
-    .audio-tip{position:absolute;bottom:20px;color:#fff;opacity:0.7;font-size:14px;text-align:center;z-index:10;}
+*{margin:0;padding:0;box-sizing:border-box;overflow:hidden;}
+body{
+  width:100vw;height:100vh;
+  background:#05001a;
+  display:flex;justify-content:center;align-items:center;
+  font-family:"Microsoft Yahei",sans-serif;
+  cursor:pointer;
+}
+.greeting{
+  font-family:"Ma Shan Zheng",sans-serif;
+  font-size:35px;
+  font-weight:bold;
+  color:#fff;
+  position:absolute;
+  top:30%;left:50%;
+  transform:translateX(-50%);
+  opacity:0;
+  transition:opacity 3s linear;
+  z-index:5;
+}
+canvas{
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+  z-index:1;
+}
+.audio-tip{
+  position:absolute;
+  bottom:20px;
+  color:#fff;
+  opacity:.7;
+  font-size:14px;
+  z-index:10;
+}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
 </head>
+
 <body>
 
-<div class="initial-countdown" id="initialCount"></div>
-<div class="big-count" id="count3">3</div>
-<div class="big-count" id="count2">2</div>
-<div class="big-count" id="count1">1</div>
-<div class="greeting" id="greeting1">새해 복 많이 받으세요</div>
-<div class="audio-tip" id="audioTip">✨ 点击屏幕解锁本地爆破音效 ✨</div>
+<div class="greeting" id="greeting">새해 복 많이 받으세요</div>
+<div class="audio-tip" id="audioTip">点击屏幕 🎆</div>
 <canvas id="canvas"></canvas>
 
-<div style="display:none;">
-    <audio id="sound1" src="1.mp3" preload="auto"></audio>
-    <audio id="sound2" src="2.mp3" preload="auto"></audio>
-    <audio id="sound3" src="3.mp3" preload="auto"></audio>
-</div>
+<!-- 本地音频 -->
+<audio id="sound2" src="2.mp3" preload="auto"></audio>
+<audio id="sound3" src="3.mp3" preload="auto"></audio>
 
 <script>
-const initialCountEl=document.getElementById('initialCount');
-const count3El=document.getElementById('count3');
-const count2El=document.getElementById('count2');
-const count1El=document.getElementById('count1');
-const greeting1El=document.getElementById('greeting1');
-const audioTipEl=document.getElementById('audioTip');
-const canvas=document.getElementById('canvas');
-const ctx=canvas.getContext('2d');
+/* ===== Canvas ===== */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+addEventListener('resize',()=>{
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+});
 
-const fireworkSounds = [
-    document.getElementById('sound1'),
-    document.getElementById('sound2'),
-    document.getElementById('sound3')
-];
+/* ===== 文字 ===== */
+const greeting = document.getElementById('greeting');
+setTimeout(()=>{
+  greeting.style.opacity = 1;
+  setTimeout(()=>greeting.style.opacity = 0,3000);
+},3000);
 
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
-window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
-
-function padZero(n){return n.toString().padStart(2,'0');}
-
-// ===== 倒数逻辑 =====
-let currentTime=new Date('2025-12-31T23:59:57').getTime();
-const endTime=new Date('2026-01-01T00:00:00').getTime();
-function updateInitialCount(){
-    const date=new Date(currentTime);
-    initialCountEl.textContent=`${date.getFullYear()}-${padZero(date.getMonth()+1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}:${padZero(date.getSeconds())}`;
-    if(currentTime>=endTime){clearInterval(initialInterval);initialCountEl.style.display='none';startBigCountdown();}
-    currentTime+=1000;
-}
-const initialInterval=setInterval(updateInitialCount,1000);
-updateInitialCount();
-
-function startBigCountdown(){
-    const counts=[count3El,count2El,count1El];
-    let i=0;
-    const timer=setInterval(()=>{
-        if(i>0) counts[i-1].style.display='none';
-        if(i<3){counts[i].style.display='block';i++;}
-        else{clearInterval(timer);setTimeout(startFireworksPhase,500);}
-    },1000);
-}
-
-// ===== 音效重叠播放逻辑 =====
-function playFireworkSound() {
-    const randomAudio = fireworkSounds[Math.floor(Math.random() * fireworkSounds.length)];
-    const shell = randomAudio.cloneNode(); // 关键：克隆节点以支持重叠播放
-    shell.volume = 0.6;
-    shell.play().catch(e => {}); 
-    shell.onended = () => shell.remove(); // 播放完自动清理
-}
-
-// ===== 烟花粒子逻辑 =====
-class Particle{
-    constructor(x,y,color){
-        this.x=x;this.y=y;this.radius=Math.random()*2+1;
-        this.color=color;this.speedX=(Math.random()-0.5)*8;
-        this.speedY=(Math.random()-0.5)*8;this.alpha=1;this.gravity=0.08;
-    }
-    update(){this.x+=this.speedX;this.y+=this.speedY;this.speedY+=this.gravity;this.alpha-=0.012;}
-    draw(){ctx.save();ctx.globalAlpha=this.alpha;ctx.beginPath();ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);ctx.fillStyle=this.color;ctx.fill();ctx.restore();}
-}
-
+/* ===== 烟花粒子 ===== */
 let particles=[];
-function createFirework(){
-    const x=Math.random()*canvas.width;
-    const y=Math.random()*canvas.height*0.5;
-    const colors=["#ff0043","#14fc56","#1e90ff","#ffd700","#ff69b4"];
-    const color=colors[Math.floor(Math.random()*colors.length)];
-    
-    for(let i=0;i<80;i++){particles.push(new Particle(x,y,color));}
-    playFireworkSound(); // 视觉生成的同时，触发本地音效
+class Particle{
+  constructor(x,y,color){
+    this.x=x;this.y=y;
+    this.vx=(Math.random()-0.5)*7;
+    this.vy=(Math.random()-0.5)*7;
+    this.alpha=1;
+    this.color=color;
+  }
+  update(){
+    this.x+=this.vx;
+    this.y+=this.vy;
+    this.vy+=0.05;
+    this.alpha-=0.015;
+    return this.alpha>0;
+  }
+  draw(){
+    ctx.globalAlpha=this.alpha;
+    ctx.fillStyle=this.color;
+    ctx.fillRect(this.x,this.y,3,3);
+    ctx.globalAlpha=1;
+  }
 }
-
+function createFireworkAt(x,y){
+  const colors=["#ff0043","#14fc56","#1e90ff","#ffd700","#ff69b4"];
+  const color=colors[Math.floor(Math.random()*colors.length)];
+  for(let i=0;i<80;i++){
+    particles.push(new Particle(x,y,color));
+  }
+}
 function animate(){
-    ctx.fillStyle="rgba(5,0,26,0.2)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    particles.forEach((p,index)=>{
-        p.update();
-        p.draw();
-        if(p.alpha<=0) particles.splice(index,1);
-    });
-    requestAnimationFrame(animate);
+  ctx.fillStyle="rgba(5,0,26,.25)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  particles = particles.filter(p=>p.update());
+  particles.forEach(p=>p.draw());
+  requestAnimationFrame(animate);
+}
+animate();
+
+/* ===== 声音（每次从头，不连音） ===== */
+const sound2 = document.getElementById('sound2');
+const sound3 = document.getElementById('sound3');
+
+function playFromStart(audioEl, volume){
+  const a = audioEl.cloneNode();
+  a.volume = volume;
+  a.play().catch(()=>{});
+  a.onended = () => a.remove();
 }
 
-function startFireworksPhase(){
-    greeting1El.style.display='block';
-    setInterval(createFirework,800);
-    animate();
-}
-
-// ===== 交互激活 (针对移动端和浏览器安全策略) =====
-document.body.addEventListener('click',()=>{
-    // 预激活所有轨道
-    fireworkSounds.forEach(s => {
-        s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(e=>{});
-    });
-    audioTipEl.style.display='none';
-},{once:true});
+/* ===== 点击：烟花 + 声音 ===== */
+document.body.addEventListener('click', (e)=>{
+  playFromStart(sound2,0.6);
+  playFromStart(sound3,0.7);
+  createFireworkAt(e.clientX, e.clientY);
+  document.getElementById('audioTip').style.display='none';
+});
 </script>
+
 </body>
 </html>
