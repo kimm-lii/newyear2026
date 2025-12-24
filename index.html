@@ -17,9 +17,22 @@ body{
 @keyframes colorShift{0%{color:#ff3366;}25%{color:#33ccff;}50%{color:#ffd700;}75%{color:#9933ff;}100%{color:#33ff66;}}
 .big-count{font-size:8vw;font-weight:900;text-align:center;display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);animation:scaleBlink 1s ease-in-out forwards;}
 @keyframes scaleBlink{0%{opacity:0;transform:translate(-50%,-50%) scale(0.5);}50%{opacity:1;transform:translate(-50%,-50%) scale(1.1);}100%{opacity:0;transform:translate(-50%,-50%) scale(1.8);}}
-.greeting{font-family:"Ma Shan Zheng",sans-serif;font-size:35px;font-weight:bold;-webkit-text-stroke:2px #222;color:transparent;background-clip:text;-webkit-background-clip:text;position:absolute;top:30%;left:50%;transform:translateX(-50%);display:none;animation:floatUpFade 2s ease-out forwards,colorGradient 3s infinite alternate;}
+.greeting{
+    font-family:"Ma Shan Zheng",sans-serif;
+    font-size:25px; /* 改小字体 */
+    font-weight:bold;
+    -webkit-text-stroke:2px #222;
+    color:transparent;
+    background-clip:text;
+    -webkit-background-clip:text;
+    position:absolute;
+    top:30%;
+    left:50%;
+    transform:translateX(-50%);
+    display:none;
+    animation:colorGradient 3s infinite alternate;
+}
 @keyframes colorGradient{0%{background-image:linear-gradient(90deg,#ff3366,#ffd700);}25%{background-image:linear-gradient(90deg,#ffd700,#33ccff);}50%{background-image:linear-gradient(90deg,#33ccff,#9933ff);}75%{background-image:linear-gradient(90deg,#9933ff,#ff9933);}100%{background-image:linear-gradient(90deg,#ff9933,#ff3366);}}
-@keyframes floatUpFade{0%{opacity:1;transform:translateX(-50%) translateY(0);}100%{opacity:0;transform:translateX(-50%) translateY(-50px);}}
 canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;}
 .audio-tip{position:absolute;bottom:20px;color:#fff;opacity:0.7;font-size:14px;text-align:center;z-index:10;}
 </style>
@@ -27,17 +40,12 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1;}
 </head>
 <body>
 
-<!-- 初始倒计时 -->
 <div class="initial-countdown" id="initialCount"></div>
-<!-- 3/2/1倒数 -->
 <div class="big-count" id="count3">3</div>
 <div class="big-count" id="count2">2</div>
 <div class="big-count" id="count1">1</div>
-<!-- 韩语祝福 -->
 <div class="greeting" id="greeting1">새해 복 많이 받으세요</div>
-<!-- 音乐提示 -->
-<div class="audio-tip" id="audioTip">Pot</div>
-<!-- 烟花画布 -->
+<div class="audio-tip" id="audioTip">点击屏幕有声音</div>
 <canvas id="canvas"></canvas>
 
 <!-- 本地音效 -->
@@ -142,21 +150,26 @@ function animate(){
 }
 
 // ===== 开始烟花阶段 =====
-let canPlaySound = false; // 倒计时前不允许播放声音
+let canPlaySound = false;
 function startFireworksPhase(){
-    canPlaySound = true; // ✅ 倒计时结束后允许播放声音
+    canPlaySound = true;
     greeting1El.style.display='block';
+    greeting1El.style.opacity = '1';
+    greeting1El.style.transition = 'opacity 3s ease-out';
+    // 停留8秒后缓慢3秒消失
+    setTimeout(()=>{ greeting1El.style.opacity='0'; }, 8000);
+
     setInterval(createFirework,800);
     animate();
 }
 
-// ===== 点击播放声音（倒计时结束后才生效） =====
+// ===== 点击播放声音 =====
 const sound2=document.getElementById('sound2');
 const sound3=document.getElementById('sound3');
 let clickCount=0;
 
 document.body.addEventListener('click', ()=>{
-    if(!canPlaySound) return; // 倒计时阶段点击无效
+    if(!canPlaySound) return;
 
     clickCount++;
     if(clickCount <= 2){
@@ -168,7 +181,6 @@ document.body.addEventListener('click', ()=>{
     audioTipEl.style.display='none';
 });
 
-// 每次播放从头开始
 function playFromStart(audioEl, volume){
     const a = audioEl.cloneNode();
     a.volume = volume;
@@ -178,4 +190,3 @@ function playFromStart(audioEl, volume){
 </script>
 </body>
 </html>
-
