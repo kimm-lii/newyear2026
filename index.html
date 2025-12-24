@@ -13,15 +13,12 @@
             font-family: "Microsoft Yahei", sans-serif;
             cursor: pointer;
         }
-        /* 顶部实时日期时间 */
         .initial-countdown { font-size: 24px; font-weight: bold; text-align: center; animation: colorShift 2s infinite alternate; position: absolute; z-index: 50; }
         @keyframes colorShift { 0% { color: #ff3366; } 25% { color: #33ccff; } 50% { color: #ffd700; } 75% { color: #9933ff; } 100% { color: #33ff66; } }
 
-        /* 倒计时数字样式 */
         .big-count { font-size: 15vw; font-weight: 900; text-align: center; display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); animation: scaleBlink 1s ease-in-out forwards; z-index: 100; }
         @keyframes scaleBlink { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
 
-        /* 韩文祝福语样式：已整合为 20px */
         .greeting { 
             font-family: "Ma Shan Zheng", sans-serif; 
             font-size: 20px; 
@@ -68,14 +65,16 @@
     const ctx = canvas.getContext('2d');
     const sUp = document.getElementById('sound1'), 
           sSpecial = document.getElementById('sound2'), 
-          sBoom = document.getElementById('sound3');
+          sBoom = document.getElementById('sound3'),
+          bgm = document.getElementById('bgm');
 
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
     let isSpecialActive = false; 
+    let stopAllButSound1 = false; // 30秒后停止其他音效的开关
+    let specialCount = 0; // 音效2出现次数计数
 
-    // 倒计时逻辑
     let currentTime = new Date('2025-12-31T23:59:57').getTime();
     const endTime = new Date('2026-01-01T00:00:00').getTime();
 
@@ -145,6 +144,7 @@
     }
 
     function playAudio(obj, vol = 0.5) {
+        if (stopAllButSound1 && obj !== sUp) return; // 30秒后如果不是音效1则不播放
         const s = obj.cloneNode(); s.volume = vol; s.play().catch(() => {});
         s.onended = () => s.remove();
     }
@@ -160,7 +160,7 @@
         const colors = ["#ff3366", "#ffd700", "#33ccff", "#33ff66", "#ff69b4"];
         const color = colors[Math.floor(Math.random()*colors.length)];
 
-        if (isSpecialActive) {
+        if (isSpecialActive || stopAllButSound1) {
             rockets.push(new Rocket(x, canvas.height, x, y, color));
             playAudio(sUp, 0.3);
         } else {
@@ -179,24 +179,50 @@
     }
 
     function startFireworksPhase() {
-        document.getElementById('greeting1').style.display = 'block';
+        const greet = document.getElementById('greeting1');
+        greet.style.display = 'block';
+        
+        // --- 1. 祝福语 10秒后消失 ---
+        setTimeout(() => {
+            greet.style.display = 'none';
+        }, 10000);
+
+        // --- 2. 30秒后停止BGM和其他音效 ---
+        setTimeout(() => {
+            stopAllButSound1 = true;
+            bgm.pause();
+            sSpecial.pause();
+        }, 30000);
+
         animate();
         setInterval(handleFireworks, 800);
-        function triggerSpecialCycle() {
+
+        // --- 3. 音效2逻辑：只出现2次，每次8秒 ---
+        const specialInterval = setInterval(() => {
+            if (specialCount >= 2 || stopAllButSound1) {
+                clearInterval(specialInterval);
+                return;
+            }
+            
             isSpecialActive = true;
             sSpecial.currentTime = 0;
             sSpecial.play();
+            specialCount++;
+
             setTimeout(() => {
                 isSpecialActive = false;
                 sSpecial.pause();
-            }, 8000);
-        }
-        triggerSpecialCycle();
-        setInterval(triggerSpecialCycle, 12000);
+            }, 8000); // 持续8秒
+        }, 12000); // 每12秒检查一次是否触发
+        
+        // 立即执行第一次
+        isSpecialActive = true;
+        sSpecial.play();
+        specialCount++;
+        setTimeout(() => { isSpecialActive = false; sSpecial.pause(); }, 8000);
     }
 
     document.body.addEventListener('click', () => {
-        const bgm = document.getElementById('bgm');
         bgm.play().catch(e => console.log("Music play failed:", e));
         [sUp, sSpecial, sBoom].forEach(s => { 
             s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(() => {}); 
