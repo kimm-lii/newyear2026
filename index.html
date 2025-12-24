@@ -11,9 +11,29 @@
         @keyframes colorShift { 0% { color: #ff3366; } 25% { color: #33ccff; } 50% { color: #ffd700; } 75% { color: #9933ff; } 100% { color: #33ff66; } }
         .big-count { font-size: 15vw; font-weight: 900; text-align: center; display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); animation: scaleBlink 1s ease-in-out forwards; z-index: 100; }
         @keyframes scaleBlink { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
-        .greeting { font-family: "Ma Shan Zheng", sans-serif; font-size: 20px; font-weight: bold; -webkit-text-stroke: 1px #fff; color: transparent; background-clip: text; -webkit-background-clip: text; position: absolute; top: 35%; left: 50%; transform: translateX(-50%); display: none; animation: floatUpFade 2.5s ease-out forwards, colorGradient 3s infinite alternate; z-index: 10; }
+        
+        .greeting { 
+            font-family: "Ma Shan Zheng", sans-serif; 
+            font-size: 20px; 
+            font-weight: bold; 
+            -webkit-text-stroke: 1px #fff; 
+            color: transparent; 
+            background-clip: text; 
+            -webkit-background-clip: text; 
+            position: absolute; 
+            top: 35%; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            display: none; 
+            z-index: 10; 
+            transition: opacity 2s ease; /* 缓慢闪退效果 */
+        }
+        .greeting.show { display: block; animation: floatUp 2.5s ease-out forwards, colorGradient 3s infinite alternate; }
+        .greeting.fade-out { opacity: 0; } /* 触发缓慢消失 */
+
         @keyframes colorGradient { 0% { background-image: linear-gradient(90deg, #ff3366, #ffd700); } 100% { background-image: linear-gradient(90deg, #33ccff, #ff3366); } }
-        @keyframes floatUpFade { 0% { opacity: 1; transform: translateX(-50%) translateY(20px); } 100% { opacity: 0.8; transform: translateX(-50%) translateY(0); } }
+        @keyframes floatUp { 0% { transform: translateX(-50%) translateY(20px); } 100% { transform: translateX(-50%) translateY(0); } }
+        
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         .audio-tip { position: absolute; bottom: 30px; color: #fff; opacity: 0.6; font-size: 14px; text-align: center; z-index: 20; }
     </style>
@@ -40,10 +60,9 @@
     const sUp = document.getElementById('sound1'), sSpecial = document.getElementById('sound2'), sBoom = document.getElementById('sound3');
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 
-    let isSound2Disabled = false; // 20秒后禁用音效2
+    let isS1S2Disabled = false; // 30多秒后禁用音效1和2
     let particles = [];
 
-    // 倒计时逻辑
     let currentTime = new Date('2025-12-31T23:59:57').getTime();
     const endTime = new Date('2026-01-01T00:00:00').getTime();
 
@@ -80,24 +99,20 @@
     }
 
     function playAudio(obj, vol = 0.5) {
-        if (isSound2Disabled && obj === sSpecial) return; // 20秒后拦截音效2
+        if (isS1S2Disabled && (obj === sUp || obj === sSpecial)) return; 
         const s = obj.cloneNode(); s.volume = vol; s.play().catch(() => {});
         s.onended = () => s.remove();
     }
 
-    function createExplosion(x, y) {
+    function handleFireworks() {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height * 0.6;
         const colors = ["#ff3366", "#ffd700", "#33ccff", "#33ff66", "#ff69b4"];
         const color = colors[Math.floor(Math.random()*colors.length)];
         for (let i = 0; i < 80; i++) particles.push(new Particle(x, y, color));
-        playAudio(sBoom, 0.7); // 音效3保留
-        playAudio(sUp, 0.2);   // 音效1保留
-    }
-
-    function handleFireworks() {
-        // 取消上升场景，直接在空中炸开
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height * 0.6;
-        createExplosion(x, y);
+        
+        playAudio(sBoom, 0.7); // 全程音效3
+        if (!isS1S2Disabled) playAudio(sUp, 0.2); // 32秒前音效1
     }
 
     function animate() {
@@ -109,24 +124,31 @@
 
     function startFireworksPhase() {
         const greet = document.getElementById('greeting1');
-        greet.style.display = 'block';
+        greet.classList.add('show');
         
-        // 祝福语 5秒后消失
-        setTimeout(() => { greet.style.display = 'none'; }, 5000);
-
-        // 20秒后禁用音效2
-        setTimeout(() => { isSound2Disabled = true; sSpecial.pause(); }, 20000);
+        // 祝福语 4秒后开始缓慢闪退
+        setTimeout(() => { greet.classList.add('fade-out'); }, 4000);
 
         animate(); 
         setInterval(handleFireworks, 600);
 
-        // 初始触发音效2
-        sSpecial.currentTime = 0; sSpecial.play();
-        // 设置一个循环，直到20秒被禁用
-        const spInterval = setInterval(() => {
-            if (isSound2Disabled) { clearInterval(spInterval); return; }
-            sSpecial.currentTime = 0; sSpecial.play();
+        // --- 音效2 核心逻辑 ---
+        // 1. 8秒后开始第一次播放 (持续7秒)
+        setTimeout(() => {
+            sSpecial.play();
+            // 播放7秒后停止
+            setTimeout(() => { sSpecial.pause(); sSpecial.currentTime = 0; }, 7000);
         }, 8000);
+
+        // 2. 停止10秒后再次播放 (8s+7s+10s = 25s)
+        setTimeout(() => {
+            sSpecial.play();
+            // 再次播放7秒后停止 (25s+7s = 32s)
+            setTimeout(() => { 
+                sSpecial.pause(); 
+                isS1S2Disabled = true; // 32秒后禁止音效1和2
+            }, 7000);
+        }, 25000);
     }
 
     document.body.addEventListener('click', () => {
