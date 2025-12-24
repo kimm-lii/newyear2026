@@ -1,160 +1,109 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新年快乐</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; overflow: hidden; }
-        body { width: 100vw; height: 100vh; background: #05001a; display: flex; justify-content: center; align-items: center; font-family: "Microsoft Yahei", sans-serif; cursor: pointer; }
-        .initial-countdown { font-size: 24px; font-weight: bold; text-align: center; animation: colorShift 2s infinite alternate; position: absolute; z-index: 50; }
-        @keyframes colorShift { 0% { color: #ff3366; } 25% { color: #33ccff; } 50% { color: #ffd700; } 75% { color: #9933ff; } 100% { color: #33ff66; } }
-        .big-count { font-size: 15vw; font-weight: 900; text-align: center; display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); animation: scaleBlink 1s ease-in-out forwards; z-index: 100; }
-        @keyframes scaleBlink { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); } }
-        
-        .greeting { 
-            font-family: "Ma Shan Zheng", sans-serif; 
-            font-size: 20px; 
-            font-weight: bold; 
-            -webkit-text-stroke: 1px #fff; 
-            color: transparent; 
-            background-clip: text; 
-            -webkit-background-clip: text; 
-            position: absolute; 
-            top: 35%; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            display: none; 
-            z-index: 10; 
-            transition: opacity 2s ease; /* 缓慢闪退效果 */
-        }
-        .greeting.show { display: block; animation: floatUp 2.5s ease-out forwards, colorGradient 3s infinite alternate; }
-        .greeting.fade-out { opacity: 0; } /* 触发缓慢消失 */
-
-        @keyframes colorGradient { 0% { background-image: linear-gradient(90deg, #ff3366, #ffd700); } 100% { background-image: linear-gradient(90deg, #33ccff, #ff3366); } }
-        @keyframes floatUp { 0% { transform: translateX(-50%) translateY(20px); } 100% { transform: translateX(-50%) translateY(0); } }
-        
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        .audio-tip { position: absolute; bottom: 30px; color: #fff; opacity: 0.6; font-size: 14px; text-align: center; z-index: 20; }
-    </style>
-    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<title>2026 새해 복 많이 받으세요</title>
+<style>
+*{margin:0;padding:0;overflow:hidden}
+body{background:#05001a;width:100vw;height:100vh;cursor:pointer}
+canvas{position:absolute;top:0;left:0}
+.greeting{
+  position:absolute;
+  top:35%;left:50%;
+  transform:translateX(-50%);
+  font-size:28px;
+  color:white;
+  opacity:0;
+  transition:opacity 5s ease;
+}
+</style>
 </head>
 <body>
-<div class="initial-countdown" id="initialCount"></div>
-<div class="big-count" id="count3">3</div>
-<div class="big-count" id="count2">2</div>
-<div class="big-count" id="count1">1</div>
-<div class="greeting" id="greeting1">새해 복 많이 받으세요</div>
-<div class="audio-tip" id="audioTip">Top</div>
-<canvas id="canvas"></canvas>
+<div class="greeting" id="greet">새해 복 많이 받으세요</div>
+<canvas id="cv"></canvas>
 
-<div style="display:none;">
-    <audio id="sound1" src="1.mp3" preload="auto"></audio>
-    <audio id="sound2" src="2.mp3" preload="auto"></audio>
-    <audio id="sound3" src="3.mp3" preload="auto"></audio>
-</div>
+<!-- 音效文件 -->
+<audio id="sound1" src="1.mp3" preload="auto"></audio>
+<audio id="sound2" src="2.mp3" preload="auto"></audio>
+<audio id="sound3" src="3.mp3" preload="auto"></audio>
 
 <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const sUp = document.getElementById('sound1'), sSpecial = document.getElementById('sound2'), sBoom = document.getElementById('sound3');
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+const cv=document.getElementById("cv"),ctx=cv.getContext("2d");
+cv.width=innerWidth; cv.height=innerHeight;
+let rockets=[],parts=[];
 
-    let isS1S2Disabled = false; // 30多秒后禁用音效1和2
-    let particles = [];
+class Rocket{
+  constructor(x,t){
+    this.x=x; this.y=cv.height; this.t=t;
+    document.getElementById('sound1').currentTime=0;
+    document.getElementById('sound1').play().catch(()=>{});
+  }
+  update(){
+    this.y-=6;
+    if(this.y<=this.t){explode(this.x,this.y); return false;}
+    return true;
+  }
+  draw(){ctx.fillStyle="#fff"; ctx.fillRect(this.x,this.y,2,6);}
+}
+class Particle{
+  constructor(x,y){
+    this.x=x; this.y=y;
+    this.vx=(Math.random()-.5)*8; this.vy=(Math.random()-.5)*8;
+    this.a=1;
+  }
+  update(){
+    this.x+=this.vx; this.y+=this.vy;
+    this.vy+=.05; this.a-=.015;
+    return this.a>0;
+  }
+  draw(){
+    ctx.globalAlpha=this.a;
+    ctx.fillStyle=`hsl(${Math.random()*360},100%,60%)`;
+    ctx.fillRect(this.x,this.y,3,3);
+    ctx.globalAlpha=1;
+  }
+}
 
-    let currentTime = new Date('2025-12-31T23:59:57').getTime();
-    const endTime = new Date('2026-01-01T00:00:00').getTime();
+function explode(x,y){
+  const s3=document.getElementById('sound3');
+  s3.currentTime=0; s3.play().catch(()=>{});
+  for(let i=0;i<80;i++) parts.push(new Particle(x,y));
+}
 
-    const initialInterval = setInterval(() => {
-        const d = new Date(currentTime);
-        document.getElementById('initialCount').textContent = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,'0')}-${d.getDate().toString().padStart(2,'0')} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
-        if (currentTime >= endTime) { 
-            clearInterval(initialInterval); 
-            document.getElementById('initialCount').style.display = 'none'; 
-            startBigCountdown(); 
-        }
-        currentTime += 1000;
-    }, 1000);
+function animate(){
+  ctx.fillStyle="rgba(5,0,26,.25)";
+  ctx.fillRect(0,0,cv.width,cv.height);
+  rockets=rockets.filter(r=>r.update());
+  rockets.forEach(r=>r.draw());
+  parts=parts.filter(p=>p.update());
+  parts.forEach(p=>p.draw());
+  requestAnimationFrame(animate);
+}
 
-    function startBigCountdown() {
-        const els = [document.getElementById('count3'), document.getElementById('count2'), document.getElementById('count1')];
-        const colors = ['#FF3366', '#FFD700', '#33CCFF'];
-        let i = 0;
-        const timer = setInterval(() => {
-            if (i > 0) els[i-1].style.display = 'none';
-            if (i < 3) { els[i].style.color = colors[i]; els[i].style.display = 'block'; i++; }
-            else { clearInterval(timer); startFireworksPhase(); }
-        }, 1000);
-    }
+/* 控制时间轴 */
+let allowSound1=true;
+setTimeout(()=>{allowSound1=false;},30000); // 音效1 30秒后停止
 
-    class Particle {
-        constructor(x, y, color) { 
-            this.x = x; this.y = y; this.radius = Math.random()*2+1; this.color = color; 
-            this.speedX = (Math.random()-0.5)*8; this.speedY = (Math.random()-0.5)*8; 
-            this.alpha = 1; this.gravity = 0.05; 
-        }
-        update() { this.x += this.speedX; this.y += this.speedY; this.speedY += this.gravity; this.alpha -= 0.01; }
-        draw() { ctx.save(); ctx.globalAlpha = this.alpha; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2); ctx.fillStyle = this.color; ctx.fill(); ctx.restore(); }
-    }
+// 音效2播放时间
+setTimeout(()=>{document.getElementById('sound2').play().catch(()=>{});},15000);
+setTimeout(()=>{document.getElementById('sound2').play().catch(()=>{});},40000); // 15+25秒
+// 第二次播放后不再播放
 
-    function playAudio(obj, vol = 0.5) {
-        if (isS1S2Disabled && (obj === sUp || obj === sSpecial)) return; 
-        const s = obj.cloneNode(); s.volume = vol; s.play().catch(() => {});
-        s.onended = () => s.remove();
-    }
+// 文字淡出
+const g=document.getElementById("greet");
+setTimeout(()=>{
+  g.style.opacity=1;
+  setTimeout(()=>g.style.opacity=0,3000);
+},3000);
 
-    function handleFireworks() {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height * 0.6;
-        const colors = ["#ff3366", "#ffd700", "#33ccff", "#33ff66", "#ff69b4"];
-        const color = colors[Math.floor(Math.random()*colors.length)];
-        for (let i = 0; i < 80; i++) particles.push(new Particle(x, y, color));
-        
-        playAudio(sBoom, 0.7); // 全程音效3
-        if (!isS1S2Disabled) playAudio(sUp, 0.2); // 32秒前音效1
-    }
+// 烟花生成
+setInterval(()=>{
+  if(allowSound1) rockets.push(new Rocket(Math.random()*cv.width,Math.random()*cv.height*0.4));
+},700);
 
-    function animate() {
-        ctx.fillStyle = "rgba(5, 0, 26, 0.2)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        particles = particles.filter(p => p.alpha > 0);
-        particles.forEach(p => { p.update(); p.draw(); });
-        requestAnimationFrame(animate);
-    }
-
-    function startFireworksPhase() {
-        const greet = document.getElementById('greeting1');
-        greet.classList.add('show');
-        
-        // 祝福语 4秒后开始缓慢闪退
-        setTimeout(() => { greet.classList.add('fade-out'); }, 4000);
-
-        animate(); 
-        setInterval(handleFireworks, 600);
-
-        // --- 音效2 核心逻辑 ---
-        // 1. 8秒后开始第一次播放 (持续7秒)
-        setTimeout(() => {
-            sSpecial.play();
-            // 播放7秒后停止
-            setTimeout(() => { sSpecial.pause(); sSpecial.currentTime = 0; }, 7000);
-        }, 8000);
-
-        // 2. 停止10秒后再次播放 (8s+7s+10s = 25s)
-        setTimeout(() => {
-            sSpecial.play();
-            // 再次播放7秒后停止 (25s+7s = 32s)
-            setTimeout(() => { 
-                sSpecial.pause(); 
-                isS1S2Disabled = true; // 32秒后禁止音效1和2
-            }, 7000);
-        }, 25000);
-    }
-
-    document.body.addEventListener('click', () => {
-        [sUp, sSpecial, sBoom].forEach(s => { s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(() => {}); });
-        document.getElementById('audioTip').style.display = 'none';
-    }, {once: true});
+document.body.addEventListener("click",()=>{
+  animate();
+},{once:true});
 </script>
 </body>
 </html>
