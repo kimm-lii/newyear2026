@@ -14,7 +14,7 @@ canvas{position:absolute;top:0;left:0}
   font-size:28px;
   color:white;
   opacity:0;
-  transition:opacity 5s ease;
+  transition:opacity 3s linear;
 }
 </style>
 </head>
@@ -22,7 +22,7 @@ canvas{position:absolute;top:0;left:0}
 <div class="greeting" id="greet">새해 복 많이 받으세요</div>
 <canvas id="cv"></canvas>
 
-<!-- 音效文件 -->
+<!-- 音效 -->
 <audio id="sound1" src="1.mp3" preload="auto"></audio>
 <audio id="sound2" src="2.mp3" preload="auto"></audio>
 <audio id="sound3" src="3.mp3" preload="auto"></audio>
@@ -32,11 +32,17 @@ const cv=document.getElementById("cv"),ctx=cv.getContext("2d");
 cv.width=innerWidth; cv.height=innerHeight;
 let rockets=[],parts=[];
 
+let allowSound1 = true;
+let allowSound2 = true;
+
+// Rocket 烟花升空
 class Rocket{
   constructor(x,t){
     this.x=x; this.y=cv.height; this.t=t;
-    document.getElementById('sound1').currentTime=0;
-    document.getElementById('sound1').play().catch(()=>{});
+    if(allowSound1){
+      const s1=document.getElementById('sound1');
+      s1.currentTime=0; s1.play().catch(()=>{});
+    }
   }
   update(){
     this.y-=6;
@@ -45,15 +51,15 @@ class Rocket{
   }
   draw(){ctx.fillStyle="#fff"; ctx.fillRect(this.x,this.y,2,6);}
 }
+
+// 烟花爆炸粒子
 class Particle{
   constructor(x,y){
     this.x=x; this.y=y;
-    this.vx=(Math.random()-.5)*8; this.vy=(Math.random()-.5)*8;
-    this.a=1;
+    this.vx=(Math.random()-.5)*8; this.vy=(Math.random()-.5)*8; this.a=1;
   }
   update(){
-    this.x+=this.vx; this.y+=this.vy;
-    this.vy+=.05; this.a-=.015;
+    this.x+=this.vx; this.y+=this.vy; this.vy+=.05; this.a-=.015;
     return this.a>0;
   }
   draw(){
@@ -65,6 +71,10 @@ class Particle{
 }
 
 function explode(x,y){
+  if(allowSound2){
+    const s2=document.getElementById('sound2');
+    s2.currentTime=0; s2.play().catch(()=>{});
+  }
   const s3=document.getElementById('sound3');
   s3.currentTime=0; s3.play().catch(()=>{});
   for(let i=0;i<80;i++) parts.push(new Particle(x,y));
@@ -80,26 +90,29 @@ function animate(){
   requestAnimationFrame(animate);
 }
 
-/* 控制时间轴 */
-let allowSound1=true;
-setTimeout(()=>{allowSound1=false;},30000); // 音效1 30秒后停止
-
-// 音效2播放时间
-setTimeout(()=>{document.getElementById('sound2').play().catch(()=>{});},15000);
-setTimeout(()=>{document.getElementById('sound2').play().catch(()=>{});},40000); // 15+25秒
-// 第二次播放后不再播放
-
-// 文字淡出
+// 控制文字淡出
 const g=document.getElementById("greet");
 setTimeout(()=>{
   g.style.opacity=1;
-  setTimeout(()=>g.style.opacity=0,3000);
-},3000);
+  setTimeout(()=>g.style.opacity=0,3000); // 3秒淡出
+},3000); // 3秒后出现
 
 // 烟花生成
-setInterval(()=>{
-  if(allowSound1) rockets.push(new Rocket(Math.random()*cv.width,Math.random()*cv.height*0.4));
+const fireworkInterval = setInterval(()=>{
+  if(allowSound1 || allowSound2) rockets.push(new Rocket(Math.random()*cv.width,Math.random()*cv.height*0.4));
 },700);
+
+// 25秒后取消所有声音，保留音效1和音效2
+setTimeout(()=>{
+  const s3=document.getElementById('sound3');
+  s3.pause(); s3.currentTime=0; // 停止音效3
+},25000);
+
+// 30秒后音效1和音效2完全消失
+setTimeout(()=>{
+  allowSound1=false;
+  allowSound2=false;
+},30000);
 
 document.body.addEventListener("click",()=>{
   animate();
